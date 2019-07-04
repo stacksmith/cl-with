@@ -14,7 +14,7 @@ WITH- unifies the syntax for structs, classes, as well as foreign CFFI objects -
 (with- (:temp :int p)                                  ; like with-foreign-object
        (:temp (:struct gtk:g-point) gpt "P1-")         ;
        (:old 'q:spoint spt "P2-")                      ; use existing instance
-	   (:new 'graphics:point ppp "" (h hor)(v ver))    ; ppp gets a new instance
+       (:new 'graphics:point ppp "" (h hor)(v ver))    ; ppp gets a new instance
   (setf p1-x p2-x              ;note that bindings are package-local!
         p1-y p2-y)             ;and prefixed to differentiate multiple objects
   (setf h (+ p1-x p2-x)
