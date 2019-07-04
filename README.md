@@ -38,7 +38,7 @@ BSD 3-clause License
 
 ## Installation
 
-Clone the repo into a visible directory, use (ql:quickload "CL-AVEC") or ASDF magic.
+Clone the repo into a visible directory, use (ql:quickload "CL-WITH") or ASDF magic.
 
 This library requires CFFI and CLOSER-MOP
 
