@@ -1,6 +1,6 @@
 # WITH-
 
-WITH- is a Swiss-Army-Knife macro that attempts to make CL code more consice and regular.
+WITH- is a Swiss-Army-Knife macro that attempts to make CL code more consice and regular - by grouping all `with-` macros and providing uniform syntax for creating and accessing structs, class instances, and CFFI objects.
 
 The most obvious benefit it provides is the ability to group any number of existing with- macros together, avoiding deep indentation:
 ```
