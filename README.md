@@ -12,9 +12,9 @@ The most obvious benefit it provides is the ability to group any number of exist
 WITH- unifies the syntax for structs, classes, as well as foreign CFFI objects -- automatically extracting and rebinding slot accessors.
 ```
 (with- (:temp :int p)                                  ; like with-foreign-object
-       (:temp (:struct gtk:g-point) gpt "P1-")         ;
+       (:temp (:struct gtk:g-point) gpt "P1-")         ; p1-x and p1-y auto-gen'ed
        (:old 'q:spoint spt "P2-")                      ; use existing instance
-       (:new 'graphics:point ppp "" (h hor)(v ver))    ; ppp gets a new instance
+       (:new 'graphics:point ppp "" (h hor)(v ver))    ; rename graphics::hor to h, etc.
   (setf p1-x p2-x              ;note that bindings are package-local!
         p1-y p2-y)             ;and prefixed to differentiate multiple objects
   (setf h (+ p1-x p2-x)
