@@ -1,12 +1,36 @@
-# cl-avec
+# WITH-
 
-AVEC is a universal macro for dealing with Common Lisp slotted objects.  It is essentially a WITH-SLOTS macro on steroids:
+WITH- is a Swiss-Army-Knife macro that attempts to make CL code more consice and regular.
+
+The most obvious benefit it provides is the ability to group any number of existing with- macros together, avoiding deep indentation:
+```
+(with-
+    (:open-file (s ...))    
+    (:output-to-string .))
+  ...))
+```
+WITH- unifies the syntax for structs, classes, as well as foreign CFFI objects -- automatically extracting and rebinding slot accessors.
+```
+(with- (:temp :int p)                                  ; like with-foreign-object
+       (:temp (:struct gtk:g-point) gpt "P1-")         ;
+       (:old 'q:spoint spt "P2-")                      ; use existing instance
+	   (:new 'graphics:point ppp "" (h hor)(v ver))    ; ppp gets a new instance
+  (setf p1-x p2-x              ;note that bindings are package-local!
+        p1-y p2-y)             ;and prefixed to differentiate multiple objects
+  (setf h (+ p1-x p2-x)
+        v (- p1-x 3))
+  ppp) 
+```  
+  
 * works with structs and classes, as well as foreign objects;
 * automatically figures out and binds all slots by default;
 * automatically rebinds package-local names regardless of where objects are defined;
 * allows multiple instances to be processed;
 * allows per-instance prefix to differentiate names;
-	
+* works with existing :old objects
+* allocates :new objects when requested
+* allocates :temp objects, destroying CFFI objects at the end
+
 
 ## License
 
@@ -16,94 +40,36 @@ BSD 3-clause License
 
 Clone the repo into a visible directory, use (ql:quickload "CL-AVEC") or ASDF magic.
 
-## A Taste of AVEC
-
-AVEC attempts to minimize the required parameters and infer as much as possible from them.  This results in a somewhat quirky - although common-sense - syntax.  Some examples:
-
-```
-(in-package :graphics)
-(defstruct point x y)
-
-(in-package :cl-user)
-(setf *gpoint* (graphics::make-point :x 1 :y 1))
-
-(avec (*gpoint*)                  ;avec automatically bound x and y
-  (values x y))                   ;in this package (beats graphics::x graphics::y)
-  
-(let (my-point)
-  (avec (my-point :new 'graphics::point (:x 1 :y 1)) 
-    (print x))
-  (avec (my-point "PT-")                ;prefix specified so bind PT-X and PT-Y
-    (print pt-x)
-	(print pt-y)))
-	
-(avec ((*gpoint* "OLD-")                       ; OLD-X and OLD-Y refer to *GPOINT*
-       (pt2 :temp point (:x 1 :y 2) "NEW-"))   ; NEW-X and NEW-Y refer to new PT2
-  (setf old-x new-x
-        old-y new-y))
-
-(defcstruct cpoint
-  (x :int )
-  (y :int ))
-
-;; pretend that offset is a foreign :int object...
-;;
-(avec ((*gpoint* "OLD-" 
-           :REBIND ((vertical y)))                    ; customize an accessor name
-       (cpt :NEW cpoint "C-")                         ; a CFFI cstruct
-	   offset)                                        ; a CFFI int pointer
-  (setf c-x (+ *offset old-x)                         ; simple CFFI types have
-        c-y (+ *offset old-vertical)                  ; value accessor with * prefix
-  cpt)
-```
-
 ## Usage
 
-`(avec descriptor body)` or `(avec (descriptors) body)` 
+`(with- descriptor body)` or `(with- (descriptor1 ...) body)` 
 
-Each descriptor is a list in the form:
+Each descriptor is a list.  It may start with a keyword version of any existing with- macro, with the 'with-' prefix removed.  WITH-OPEN-FILE must be written as  ```(with- (:open-file ...)```  In this case, the rest of the list contains whatever the original macro expects.
 
-`(instance [disposition] [prefix bindings]`
+A descriptor may also be in the form of:
 
-Only `instance` is required.  If `bindings` are provided, the `prefix` must be also specified; `disposition` is entirely optional.
+`(:new|:temp|old type instance [prefix] [bindings]`
+
 ```
-instance     A symbol, either already bound to an existing object,
-             or to be bound to a newly created object (see 'disposition').
-
-disposition  A keyword or a list specifying what the instance is, or how it is to
-             be created and dealt with.
+disposition  :new  to create a new object and bind to 'instance'
+             :temp as above, but destroyed on exit if foreign
+			 :old  to use an existing, bound 'instance'
 			 
+type         A quoted symbol signifying struct or class name
+             A symbol whose symbol-value is an actual <TYPE-CLASS>
+			 A keyword denoting a simple CFFI type such as :int
+			 A list representing a cffi type such as (:STRUCT ...)
+			 
+instance     A symbol, bound to an existing object if :old, or to be
+              bound to a newly created object if :new or :temp
+
 prefix       A string to be appended to all slot accessors for this instance
+             Optional; default is ""
 
 bindings     A list of bindings in the format acceptable to 'with-slots' or 
-             'with-foreign-slots', as appropriate
+             'with-foreign-slots', as appropriate.  Optional; defaults to
+			 automatic extraction and rebinding of all slots
 ```
-
-### Disposition
-
-AVEC works with a variety of types, including instances of CLOS classes, structs, and a variety of foreign CFFI objects.  The `disposition` parameter provides type-specific instructions.
-
-When omitted, AVEC assumes that `instance` is already bound to a struct, class or foreign object instance.  
-
-Disposition may be one of the keywords listed below; in such a case it must be followed by an appropriate clause as described:
-
-#### :NEW type construction-data
-
-AVEC will construct a new object and sets `instance` to it using `setf`.  Instance must specify a place that is setfable; the newly-created object will outlive the scope of AVEC.
-
-The type may be any valid CLOS class, struct or CFFI foreign type
-
-Construction-data must contain data appropriate for the type.
-
-#### :TEMP type construction-data
-
-AVEC will construct a temporary object and bind `instance` to it using `let`.  Foreign CFFI objects will be destroyed after the execution of `body`.
-
-#### :EXISTING type
-
-States that `instance` is alread
-
-
 
 
 			 
