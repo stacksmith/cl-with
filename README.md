@@ -40,6 +40,8 @@ BSD 3-clause License
 
 Clone the repo into a visible directory, use (ql:quickload "CL-AVEC") or ASDF magic.
 
+This library requires CFFI and CLOSER-MOP
+
 ## Usage
 
 `(with- descriptor body)` or `(with- (descriptor1 ...) body)` 
@@ -48,7 +50,7 @@ Each descriptor is a list.  It may start with a keyword version of any existing 
 
 A descriptor may also be in the form of:
 
-`(:new|:temp|old type instance [prefix] [bindings]`
+`(:new|:temp|:old type instance [prefix] [bindings]`
 
 ```
 disposition  :new  to create a new object and bind to 'instance'
@@ -70,6 +72,7 @@ bindings     A list of bindings in the format acceptable to 'with-slots' or
              'with-foreign-slots', as appropriate.  Optional; defaults to
 			 automatic extraction and rebinding of all slots
 ```
+
 
 
 			 
