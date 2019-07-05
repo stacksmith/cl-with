@@ -49,7 +49,7 @@ This library requires CFFI and CLOSER-MOP
 
 Each descriptor is a list.  It may start with a shortened version of any existing with- macro, with the 'with-' prefix removed (and package specified, if required).  WITH-OPEN-FILE must be written as  `(with- (open-file ...)`  In this case, the rest of the list contains whatever the original macro expects.
 
-(TODO:) `:let` and `:multiple-values` and `:destructure` 
+
 
 
 A descriptor may also be in the form of:

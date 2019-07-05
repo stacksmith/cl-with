@@ -267,3 +267,4 @@
   (let ((descriptors (listify descriptor-or-descriptors)))
     `(with-many (,(car descriptors) ,@(cdr descriptors)) 
        ,@body)))
+
