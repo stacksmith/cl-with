@@ -2,7 +2,7 @@
 
 WITH- is a Swiss-army-knife macro that attempts to make CL code more consice and regular - by grouping all `with-` macros and providing uniform syntax for creating and accessing structs, class instances, and CFFI objects.
 
-The most visible beneifit is grouping any number of existing with- macros together, to avoid deep indentation:
+The most visible benefit: grouping any number of existing with- macros together avoids deep indentation and makes complicated expressions simpler:
 ```
 (with-
     (:open-file ( ...))    
