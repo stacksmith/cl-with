@@ -38,7 +38,11 @@
 ;;
 ;; (quote symbol) means and try again find class or structure;
 ;; (:struct ...) means parse cffi type and try again
-(defmethod get-type-info ((type cons) )
+(defmethod get-type-info ((type t) clause &optional recursing)
+  (declare (ignore recursing))
+  (error "with-: ~A is not a valid type for ~A" type clause))
+(defmethod get-type-info ((type cons) clause &optional recursing )
+  (declare (ignore clause recursing))
   (format t "~%get-type-info cons ~A" type)
   (let ((car (car type)))
     (if (symbolp car)       ; ( symbol ...
@@ -51,32 +55,43 @@
 				  withstring *package*
 				  "~A is not a valid WITH-macro" withstring)))
 		  (cons  withname (cdr type) )
-))))))
+		  ))))))
 
 ;; symbol - get its value and try again.
-(defmethod get-type-info ((type symbol)  )
+(defmethod get-type-info ((type symbol) clause &optional recursing)
   (format t "~%get-type-info symbol ~A" type)
-  (get-type-info (symbol-value type) ))
+  (if (keywordp type)
+      (cffi::parse-type type)
+      (if recursing
+	  (error "with: ~A does not specify a valid type for ~A"
+		 type clause)
+	  (get-type-info (or (symbol-value type)
+			     (error "with-: ~A is not a valid foreign type of ~A"
+				    type clause))
+			 clause t))))
 
 ;; raw foreign type
-(defmethod get-type-info ((type cffi::foreign-type)  )
+(defmethod get-type-info ((type cffi::foreign-type) clause &optional recursing )
+  (declare (ignore clause recursing))
   (format t "~%get-type-info foreign ~A" type)
   type)
 
 
 
 ;; raw structure-class
-(defmethod get-type-info ((class structure-class) )
+(defmethod get-type-info ((class structure-class) clause &optional recursing )
+  (declare (ignore clause recursing))
   (format t "~%get-type-info structure-class ~A" class)
   class)
 
 	
 ;; raw class class
-(defmethod get-type-info ((class standard-class)  )
+(defmethod get-type-info ((class standard-class) clause &optional recursing )
+  (declare (ignore clause recursing))
   (format t "~%get-type-info class ~A" class)
   class)
 
-(defmethod get-slots ((class class))
+(defmethod get-slots ((class class) )
     (mapcar #'c2mop::slot-definition-name 
 	    (c2mop:class-slots (c2mop:ensure-finalized class))))
 
@@ -155,9 +170,9 @@
 
 (defun clause-get-prefix-binds (params)
   (let ((p1 (caar params))
-	(p2 (cadar params)))
-    (let ((prefix (if (stringp p1) p1 ""))
-	  (binds (if (stringp p1) p2 p1)))
+	(p2 (cdar params)))
+      (let ((prefix (if (stringp p1) p1 ""))
+	  (binds (if (stringp p1) p2 (car params))))
       (values prefix binds))))
 ;;==============================================================================
 ;; GET-OLD-CLAUSE
@@ -176,10 +191,14 @@
     (let* ((slots (get-slots cffitype))
 	   (fixed-binds (if binds
 			    (fix-cffi-bindings prefix binds slots)
-			    (default-bindings prefix slots))))
-      `(with-foreign-slots (,fixed-binds ,inst ,cffitype) 
+			    (default-bindings prefix slots)))
+	   (unparsed-type (cffi::unparse-type cffitype)))
+      `(with-foreign-slots (,fixed-binds ,inst ,unparsed-type) 
 	 ,@body))))
-
+(defmethod get-old-clause (inst (cffitype cffi::foreign-built-in-type) body &rest rest)
+  (declare (ignore rest))
+  `(progn
+     ,@body))
 ;;==============================================================================
 ;; GET-NEW-CLAUSE
 ;;
@@ -199,16 +218,19 @@
     (let* ((slots (get-slots cffitype))
 	   (fixed-binds (if binds
 			    (fix-cffi-bindings prefix binds slots)
-			    (default-bindings prefix slots))))
-      `(let ((,inst (foreign-alloc ,cffitype)))
-	 (with-foreign-slots (,fixed-binds ,inst ,cffitype) 
+			    (default-bindings prefix slots)))
+	   (unparsed-type (cffi::unparse-type cffitype)))
+      `(let ((,inst (foreign-alloc ',unparsed-type)))
+	 (with-foreign-slots (,fixed-binds ,inst ,unparsed-type) 
 	   ,@body)))))
+;; For built-in cffi types, such as :int, we unparse the raw <type> back to
+;; :int form, since foreign-alloc chokes _sometimes_ (:initial_element...)
+;; on the real type!
+;; Note: do not quote the simple type
+(defmethod get-new-clause (inst (cffitype cffi::foreign-built-in-type) body &rest rest)
+  `(let ((,inst (foreign-alloc ,(cffi::unparse-type cffitype) ,@(car rest))))
+     ,@body))
 
-(defmethod get-new-clause (inst (it list) body &rest rest)
-  (print rest)
-  `(let ((,inst (,@it
-		 ,@(car rest) 
-		 ,@body)))))
 ;;==============================================================================
 ;; GET-TEMP-CLAUSE
 ;;
@@ -227,54 +249,41 @@
     (let* ((slots (get-slots cffitype))
 	   (fixed-binds (if binds
 			    (fix-cffi-bindings prefix binds slots)
-			    (default-bindings prefix slots))))
-      `(with-foreign-object (,inst ,cffitype)
-	 (with-foreign-slots (,fixed-binds ,inst ,cffitype) 
+			    (default-bindings prefix slots)))
+	   (unparsed-type (cffi::unparse-type cffitype)))
+      `(with-foreign-object (,inst ',unparsed-type)
+	 (with-foreign-slots (,fixed-binds ,inst ,unparsed-type) 
 	   ,@body)))))
+
+(defmethod get-temp-clause (inst (cffitype cffi::foreign-built-in-type) body &rest rest)
+  `(with-foreign-object (,inst ,@(cffi::unparse-type cffitype) ,@(car rest))
+     ,@body))
+
 ;;===============================================================================
-
-(defmacro with-one-old ((inst type &rest params) &body body)
-   (if (keywordp type)
-      `(with-one-new-cffi-simple (,type ,inst ,@params) ,@body)
-      ;; presumably it is a slotted type
-      (let ((class (get-type-info type)))
-	(let ((clause (get-old-clause inst class body params)))
-	  `(progn
-	     ,clause)))))
-
-(defmacro with-one-new ((inst type &rest params) &body body)
-  (if (keywordp type)
-      `(with-one-new-cffi-simple (,type ,inst ,@params) ,@body)
-      ;; presumably it is a slotted type
-      (let ((class (get-type-info type)))
-	(format t "[ ~%~A~%~A~%~A]~%" type (type-of type) class)
-	(let ((clause (get-new-clause inst class body params)))
-	  `(progn
-	     ,clause)))))
-
-(defmacro with-one-temp ((inst type &rest params) &body body)
-  (if (keywordp type)
-      `(with-one-temp-cffi-simple (,type ,inst ,@params) ,@body)
-      ;; presumably it is a slotted type
-      (let ((class (get-type-info type)))
-	(let ((clause (get-new-clause inst class body params)))
-	  `(progn
-	     ,clause)))    
-      )
-)
-;===============================================================================
-(defmacro with-one ((dispo &rest rest)  &body body)
-  (let ((new-params `((,(car rest) ,(cadr rest) ,@ (cddr rest)) ,@body)))
-    (if (keywordp dispo)
+(defmacro with-one ((&whole whole dispo &rest rest)  &body body)
+  (if (keywordp dispo)
+      (let* ((type (car rest))
+	     (inst (cadr rest))
+	     (params (cddr rest)))
+	(format t "~%{inst: ~A type: ~A remainint: ~A" inst type params)
 	(case dispo
-	  ((:old :existing) `(with-one-old ,@new-params))
-	  (:new `(with-one-new ,@new-params))
-	  (:temp `(with-one-temp ,@new-params))
+	  ((:old :existing) 
+	   (get-old-clause inst (get-type-info type rest) body params))
+	  (:new
+	   (get-new-clause inst (get-type-info type rest) body params))
+	  (:temp
+	   (get-temp-clause inst (get-type-info type rest) body params))
 	  (t
 	   (let ((withname (find-symbol-or-die
 			    (catstring "WITH-" dispo) *package*
 			    "~A is not a valid WITH- symbol" )))
-	     `(,withname ,@rest ,@body))))))
+	     `(,withname ,@rest ,@body)))))
+      (if (symbolp dispo)
+	   `(let ((,dispo ,@rest))
+	      ,@body)
+	  (if (listp dispo)
+	      `(multiple-value-bind ,dispo ,@rest ,@body)
+	      (error "Invalid WITH- descriptor ~A" dispo))))
   ;;  (mapcar #'ban params)
  #|| (if (not params)
     ;  (let ((instance-type (type-of instance))))
@@ -311,9 +320,11 @@
 
 
 (defstruct point x y)
-(defun qqq (v)
-  (declare (optimize (speed 3)(safety 0)))
-  (declare (type fixnum v))
-  (multiple-value-bind (a b) v
-    
-    a)
+(defcstruct (cpoint :class cpoint)
+  (x :int)
+  (y :int))
+
+(defparameter cpoint (cffi::parse-type '(:struct cpoint)))
+
+
+
