@@ -6,7 +6,7 @@
   (if (consp (car thing))
       thing
       (list thing)))
-(defmacro mac (body) (let ((z body))))
+
 (defmacro with-this((&rest this) &body body)
   ;`(,@before (unwind-protect ,@body ,after ))
   `(,@this ,@body)
@@ -152,66 +152,85 @@
   (loop for slotsym in slots
      collect
        (list (symbolicate prefix slotsym) slotsym)))
+
+(defun clause-get-prefix-binds (params)
+  (let ((p1 (caar params))
+	(p2 (cadar params)))
+    (let ((prefix (if (stringp p1) p1 ""))
+	  (binds (if (stringp p1) p2 p1)))
+      (values prefix binds))))
 ;;==============================================================================
 ;; GET-OLD-CLAUSE
 ;;
-(defmethod get-old-clause ((class class) prefix binds instance body)
-  (let* ((slots (get-slots class))
-	 (fixed-binds (if binds
-			  (fix-lisp-bindings prefix binds slots)
-			  (default-bindings prefix slots))))
-    `(with-slots ,fixed-binds ,instance
-      ,@body)))
+(defmethod get-old-clause (inst (class class) body &rest rest)
+  (multiple-value-bind (prefix binds) (clause-get-prefix-binds rest)
+    (let* ((slots (get-slots class))
+	   (fixed-binds (if binds
+			    (fix-lisp-bindings prefix binds slots)
+			    (default-bindings prefix slots))))
+      `(with-slots ,fixed-binds ,inst
+	 ,@body))))
 
-(defmethod get-old-clause ((cffitype cffi::foreign-type) prefix binds instance body)
-  (let* ((slots (get-slots cffitype))
-	 (fixed-binds (if binds
-			  (fix-cffi-bindings prefix binds slots)
-			  (default-bindings prefix slots))))
-    `(with-foreign-slots (,fixed-binds ,instance ,cffitype) 
-      ,@body)))
+(defmethod get-old-clause (inst (cffitype cffi::foreign-type) body &rest rest)
+  (multiple-value-bind (prefix binds) (clause-get-prefix-binds rest)
+    (let* ((slots (get-slots cffitype))
+	   (fixed-binds (if binds
+			    (fix-cffi-bindings prefix binds slots)
+			    (default-bindings prefix slots))))
+      `(with-foreign-slots (,fixed-binds ,inst ,cffitype) 
+	 ,@body))))
 
 ;;==============================================================================
 ;; GET-NEW-CLAUSE
 ;;
-(defmethod get-new-clause ((class class) prefix binds instance body)
-  (let* ((slots (get-slots class))
-	 (fixed-binds (if binds
-			  (fix-lisp-bindings prefix binds slots)
-			  (default-bindings prefix slots))))
-    `(let ((,instance (make-instance ,class)))
-       (with-slots ,fixed-binds ,instance
-	   ,@body))))
+(defmethod get-new-clause (inst (class class) body &rest rest)
+  (print rest)
+  (multiple-value-bind (prefix binds) (clause-get-prefix-binds rest)
+    (let* ((slots (get-slots class))
+	   (fixed-binds (if binds
+			    (fix-lisp-bindings prefix binds slots)
+			    (default-bindings prefix slots))))
+      `(let ((,inst (make-instance ,class)))
+	 (with-slots ,fixed-binds ,inst
+	   ,@body)))))
 
-(defmethod get-new-clause ((cffitype cffi::foreign-type) prefix binds instance body)
-  (let* ((slots (get-slots cffitype))
-	 (fixed-binds (if binds
-			  (fix-cffi-bindings prefix binds slots)
-			  (default-bindings prefix slots))))
-    `(let ((,instance (foreign-alloc ,cffitype)))
-       (with-foreign-slots (,fixed-binds ,instance ,cffitype) 
-	 ,@body))))
+(defmethod get-new-clause (inst (cffitype cffi::foreign-type) body &rest rest)
+  (multiple-value-bind (prefix binds) (clause-get-prefix-binds rest)
+    (let* ((slots (get-slots cffitype))
+	   (fixed-binds (if binds
+			    (fix-cffi-bindings prefix binds slots)
+			    (default-bindings prefix slots))))
+      `(let ((,inst (foreign-alloc ,cffitype)))
+	 (with-foreign-slots (,fixed-binds ,inst ,cffitype) 
+	   ,@body)))))
 
+(defmethod get-new-clause (inst (it list) body &rest rest)
+  (print rest)
+  `(let ((,inst (,@it
+		 ,@(car rest) 
+		 ,@body)))))
 ;;==============================================================================
 ;; GET-TEMP-CLAUSE
 ;;
-(defmethod get-temp-clause ((class class) prefix binds instance body)
-   (let* ((slots (get-slots class))
-	 (fixed-binds (if binds
-			  (fix-lisp-bindings prefix binds slots)
-			  (default-bindings prefix slots))))
-    `(let ((,instance (make-instance ,class)))
-       (with-slots ,fixed-binds ,instance
-	 ,@body))))
+(defmethod get-temp-clause (inst (class class) body &rest rest)
+  (multiple-value-bind (prefix binds) (clause-get-prefix-binds rest)
+    (let* ((slots (get-slots class))
+	   (fixed-binds (if binds
+			    (fix-lisp-bindings prefix binds slots)
+			    (default-bindings prefix slots))))
+      `(let ((,inst (make-instance ,class)))
+	 (with-slots ,fixed-binds ,inst
+	   ,@body)))))
 
-(defmethod get-temp-clause ((cffitype cffi::foreign-type) prefix binds instance body)
-  (let* ((slots (get-slots cffitype))
-	 (fixed-binds (if binds
-			  (fix-cffi-bindings prefix binds slots)
-			  (default-bindings prefix slots))))
-    `(with-foreign-object (,instance ,cffitype)
-       (with-foreign-slots (,fixed-binds ,instance ,cffitype) 
-	 ,@body))))
+(defmethod get-temp-clause (inst (cffitype cffi::foreign-type) body &rest rest)
+  (multiple-value-bind (prefix binds) (clause-get-prefix-binds rest)
+    (let* ((slots (get-slots cffitype))
+	   (fixed-binds (if binds
+			    (fix-cffi-bindings prefix binds slots)
+			    (default-bindings prefix slots))))
+      `(with-foreign-object (,inst ,cffitype)
+	 (with-foreign-slots (,fixed-binds ,inst ,cffitype) 
+	   ,@body)))))
 ;;===============================================================================
 
 (defmacro with-one-old ((inst type &rest params) &body body)
@@ -219,39 +238,28 @@
       `(with-one-new-cffi-simple (,type ,inst ,@params) ,@body)
       ;; presumably it is a slotted type
       (let ((class (get-type-info type)))
-	(multiple-value-bind (prefix binds) (if (stringp (car params))
-						(values (car params) (cdr params))
-						(values "" params))
-	  (let ((clause (get-old-clause class prefix binds inst body)))
-	    `(progn
-	       ,clause))))))
+	(let ((clause (get-old-clause inst class body params)))
+	  `(progn
+	     ,clause)))))
 
 (defmacro with-one-new ((inst type &rest params) &body body)
   (if (keywordp type)
       `(with-one-new-cffi-simple (,type ,inst ,@params) ,@body)
       ;; presumably it is a slotted type
       (let ((class (get-type-info type)))
-	(if (listp class)
-	    class
-	    (multiple-value-bind (prefix binds) (if (stringp (car params))
-						    (values (car params) (cdr params))
-						    (values "" params))
-	      (let ((clause (get-new-clause class prefix binds inst body)))
-		`(progn
-		   ,clause))))
-	)))
+	(format t "[ ~%~A~%~A~%~A]~%" type (type-of type) class)
+	(let ((clause (get-new-clause inst class body params)))
+	  `(progn
+	     ,clause)))))
 
 (defmacro with-one-temp ((inst type &rest params) &body body)
   (if (keywordp type)
       `(with-one-temp-cffi-simple (,type ,inst ,@params) ,@body)
       ;; presumably it is a slotted type
       (let ((class (get-type-info type)))
-	(multiple-value-bind (prefix binds) (if (stringp (car params))
-						(values (car params) (cdr params))
-						(values "" params))
-	  (let ((clause (get-new-clause class prefix binds inst body)))
-	    `(progn
-	       ,clause))))    
+	(let ((clause (get-new-clause inst class body params)))
+	  `(progn
+	     ,clause)))    
       )
 )
 ;===============================================================================
@@ -284,8 +292,10 @@
   ||#
 (defmacro with-many ((descriptor &rest descriptors) &body body)
   `(with-one (,(first descriptor) ,@(cdr descriptor))
-     (with-many (,(car descriptors) ,@(cdr descriptors))
-       ,@body)))
+     ,(if descriptors
+	  `(with-many (,(car descriptors) ,@(cdr descriptors))
+	     ,@body)
+	  `(progn ,@body))))
 
 ;;==============================================================================
 (defmacro with- (descriptor-or-descriptors &body body)
