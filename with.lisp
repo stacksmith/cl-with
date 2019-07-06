@@ -1,6 +1,25 @@
 ;;;; cl-with.lisp
 
 (in-package #:with)
+
+(defmacro assure-list2 (thing)
+  (if (consp (car thing))
+      thing
+      (list thing)))
+(defmacro mac (body) (let ((z body))))
+(defmacro with-this((&rest this) &body body)
+  ;`(,@before (unwind-protect ,@body ,after ))
+  `(,@this ,@body)
+  )
+(defmacro with-macro((&rest definition) &body body)
+  ;`(,@before (unwind-protect ,@body ,after ))
+  `(macrolet ((mac (body)
+		,definition))
+     (mac ,body)))
+
+(defmacro with-var ((sym) &body body)
+  `(let ((,sym ,@body))))
+
 (defparameter *banlist* nil)
 
 (defun ban (symbol)
@@ -21,9 +40,18 @@
 ;; (:struct ...) means parse cffi type and try again
 (defmethod get-type-info ((type cons) )
   (format t "~%get-type-info cons ~A" type)
-  (if (eq 'quote (car type))
-      (find-class (cadr type)) 
-      (cffi::parse-type type) ))
+  (let ((car (car type)))
+    (if (symbolp car)       ; ( symbol ...
+	(if (eq 'quote car) ; ( quote ??
+	    (find-class (cadr type))
+	    (if (keywordp car ) ;  (:struct ...) or something like that?
+		(cffi::parse-type type)
+		(let* ((withstring  (catstring "WITH-" car))
+		       (withname (find-symbol-or-die
+				  withstring *package*
+				  "~A is not a valid WITH-macro" withstring)))
+		  (cons  withname (cdr type) )
+))))))
 
 ;; symbol - get its value and try again.
 (defmethod get-type-info ((type symbol)  )
@@ -186,7 +214,7 @@
 	 ,@body))))
 ;;===============================================================================
 
-(defmacro with-one-old ((type inst &rest params) &body body)
+(defmacro with-one-old ((inst type &rest params) &body body)
    (if (keywordp type)
       `(with-one-new-cffi-simple (,type ,inst ,@params) ,@body)
       ;; presumably it is a slotted type
@@ -198,20 +226,22 @@
 	    `(progn
 	       ,clause))))))
 
-(defmacro with-one-new ((type inst &rest params) &body body)
+(defmacro with-one-new ((inst type &rest params) &body body)
   (if (keywordp type)
       `(with-one-new-cffi-simple (,type ,inst ,@params) ,@body)
       ;; presumably it is a slotted type
       (let ((class (get-type-info type)))
-	(multiple-value-bind (prefix binds) (if (stringp (car params))
-						(values (car params) (cdr params))
-						(values "" params))
-	  (let ((clause (get-new-clause class prefix binds inst body)))
-	    `(progn
-	       ,clause)))
+	(if (listp class)
+	    class
+	    (multiple-value-bind (prefix binds) (if (stringp (car params))
+						    (values (car params) (cdr params))
+						    (values "" params))
+	      (let ((clause (get-new-clause class prefix binds inst body)))
+		`(progn
+		   ,clause))))
 	)))
 
-(defmacro with-one-temp ((type inst &rest params) &body body)
+(defmacro with-one-temp ((inst type &rest params) &body body)
   (if (keywordp type)
       `(with-one-temp-cffi-simple (,type ,inst ,@params) ,@body)
       ;; presumably it is a slotted type
@@ -235,7 +265,7 @@
 	  (t
 	   (let ((withname (find-symbol-or-die
 			    (catstring "WITH-" dispo) *package*
-			    "~A is not a valid WITH- symbol")))
+			    "~A is not a valid WITH- symbol" )))
 	     `(,withname ,@rest ,@body))))))
   ;;  (mapcar #'ban params)
  #|| (if (not params)
@@ -253,18 +283,21 @@
   (car descriptors) instance))
   ||#
 (defmacro with-many ((descriptor &rest descriptors) &body body)
-  (if descriptors
-      `(with-one (,(first descriptor) ,(second descriptor) ,
-		   (third descriptor) ,@(cdddr  descriptor))
-	 (with-many (,(car descriptors) ,@(cdr descriptors))
-	   ,@body))
-      `(with-one (,(first descriptor) ,(second descriptor) ,
-		   (third descriptor) ,@(cdddr  descriptor))
-	 ,@body)))
-
-(defmacro with- (descriptor-or-descriptors &body body)
-  (setf *banlist* nil)
-  (let ((descriptors (listify descriptor-or-descriptors)))
-    `(with-many (,(car descriptors) ,@(cdr descriptors)) 
+  `(with-one (,(first descriptor) ,@(cdr descriptor))
+     (with-many (,(car descriptors) ,@(cdr descriptors))
        ,@body)))
 
+;;==============================================================================
+(defmacro with- (descriptor-or-descriptors &body body)
+  (setf *banlist* nil)
+  (let ((descriptors
+	 (if (consp (car descriptor-or-descriptors))
+	     descriptor-or-descriptors
+	     (list descriptor-or-descriptors))))
+    `(with-many (,(car descriptors) ,@(cdr descriptors)) 
+       (progn
+	 ,@body))))
+
+
+
+(defstruct point x y)
