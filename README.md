@@ -29,7 +29,7 @@ It is easy to bind one or more variables in a with- statement
 
 ### CLASS, STRUCT and CFFI object integration
 
-More importantly, WITH- unifies the syntax for dealing with structs, classes, and foreign CFFI objects, extracting and rebinding slot accessors (automatically or selectively).
+More importantly, WITH- unifies the syntax for dealing with structs, classes, and foreign CFFI objects, extracting and rebinding slot accessors (automatically or selectively).  The syntax establishes a clear distinction between existing object, temporary objects and newly-created object that are expected to outlive the statement.  
 ```
 (with- (:temp :int p)                                ; like with-foreign-object
        (:temp (:struct gtk:g-point) gpt "P1-")       ; prefixed: p1-x and p1-y 
