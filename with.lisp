@@ -311,3 +311,9 @@
 
 
 (defstruct point x y)
+(defun qqq (v)
+  (declare (optimize (speed 3)(safety 0)))
+  (declare (type fixnum v))
+  (multiple-value-bind (a b) v
+    
+    a)
