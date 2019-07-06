@@ -1,8 +1,8 @@
 # WITH-
 
 WITH- is a Swiss-army-knife macro that attempts to make CL code more concise and regular - by:
-* *grouping all with- macros*,
-* *providing a uniform syntax* for creating and accessing instances of *structs, classes and CFFI objects*
+* grouping all with- macros,
+* providing a uniform syntax for creating and accessing instances of structs, classes and CFFI objects
 * Unifying the syntax for LET and MULTIPLE-VALUE-BIND inside the WITH- expression.
 
 ### WITH- aggregation
