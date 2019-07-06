@@ -260,35 +260,30 @@
      ,@body))
 
 ;;===============================================================================
-(defmacro with-one ((&whole whole dispo &rest rest)  &body body)
-  (if (keywordp dispo)
-      (let* ((type (car rest))
-	     (inst (cadr rest))
-	     (params (cddr rest)))
-	(format t "~%{inst: ~A type: ~A remainint: ~A" inst type params)
-	(case dispo
-	  ((:old :existing) 
-	   (get-old-clause inst (get-type-info type rest) body params))
-	  (:new
-	   (get-new-clause inst (get-type-info type rest) body params))
-	  (:temp
-	   (get-temp-clause inst (get-type-info type rest) body params))
-	  (t
-	   (let ((withname (find-symbol-or-die
-			    (catstring "WITH-" dispo) *package*
-			    "~A is not a valid WITH- symbol" )))
-	     `(,withname ,@rest ,@body)))))
-      (if (symbolp dispo)
-	   `(let ((,dispo ,@rest))
-	      ,@body)
-	  (if (listp dispo)
-	      `(multiple-value-bind ,dispo ,@rest ,@body)
-	      (error "Invalid WITH- descriptor ~A" dispo))))
-  ;;  (mapcar #'ban params)
- #|| (if (not params)
-    ;  (let ((instance-type (type-of instance))))
-      )
-  ||#)
+(defmacro with-one (descriptor  &body body)
+  (let ((p1 (first descriptor))
+	(p2 (second descriptor))
+	(p3 (third descriptor))
+	(params (cdddr descriptor)))
+    (if (keywordp p1) ; (:output-to-file
+	(let ((withname (find-symbol-or-die
+			 (catstring "WITH-" p1) *package*
+			 "~A is not a valid WITH- symbol" )))
+	  `(,withname ,@(cdr descriptor) ,@body))
+	(if (symbolp p1) ;; (x :old type parms
+	    (case p2
+	      ((:old :existing) 
+	       (get-old-clause p1 (get-type-info p3 descriptor) body params))
+	      (:new
+	       (get-new-clause p1 (get-type-info p3 descriptor) body params))
+	      (:temp
+	       (get-temp-clause p1 (get-type-info p3 descriptor) body params))
+	      (t  `(let ((,p1 ,@(cdr descriptor)))
+		     ,@body)))
+	    (if (listp p1) ; ((x y).. = mvb
+		`(multiple-value-bind ,p1 ,@ (cdr descriptor) ,@body)
+		(error "Invalid WITH- descriptor ~A" descriptor))))))
+
   
   #||
 
@@ -300,7 +295,7 @@
   (car descriptors) instance))
   ||#
 (defmacro with-many ((descriptor &rest descriptors) &body body)
-  `(with-one (,(first descriptor) ,@(cdr descriptor))
+  `(with-one ,descriptor
      ,(if descriptors
 	  `(with-many (,(car descriptors) ,@(cdr descriptors))
 	     ,@body)
