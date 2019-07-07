@@ -106,14 +106,14 @@ The initializers for such bindings are regular Lisp code (that is, they are not 
 ```
 ## STRUCT, CLASS or CFFI instance manipulation
 
-A descriptor may also be in the form of:
+A descriptor may also bind a slotted object or a CFFI foreign object:
 
 `(instance :new|:temp|:old type [prefix] [bindings]`
 
 ### INSTANCE
 ```
 instance     A symbol, bound to an existing object if :old, or to be
-              bound to a newly created object if :new or :temp
+             bound to a newly created object if :new or :temp
 ```
 
 ### DISPOSITION
@@ -131,7 +131,7 @@ disposition  :new  to create a new object and bind to 'instance'
 ### TYPE
 ```
 type         A quoted symbol signifying struct or class name
-             A symbol whose symbol-value is an actual <TYPE-CLASS>
+             A symbol whose symbol-value is a type
 			 A keyword denoting a simple CFFI type such as :int
 			 A list representing a cffi type such as (:STRUCT ...)
 ```
