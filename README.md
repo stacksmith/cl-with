@@ -113,8 +113,10 @@ A clause may also bind a slotted object or a CFFI foreign object:
 
 ### INSTANCE
 ```
-instance     A symbol, bound to an existing object if :old, or to be
-             bound to a newly created object if :new or :temp
+instance     If :old, a reference to an existing object or a symbol 
+             bound to an existing object; or
+			 If :new or :temp -- a symbol that will be bound to 
+			 a newly created object.
 ```
 
 ### DISPOSITION
