@@ -25,7 +25,7 @@ It is easy to bind one or more variables in a with- statement
 ### CLASS, STRUCT and CFFI object integration
 More importantly, WITH- unifies the syntax for dealing with structs, classes, and foreign CFFI objects, extracting and rebinding slot accessors (automatically or selectively).  The syntax establishes a clear distinction between existing object, temporary objects and newly-created object that are expected to outlive the statement.  
 
-Syntactically, it resembles a binding initialized with an existing object (:OLD), or newly-created object (:NEW or :TEMP).  CFFI objects created as :TEMP are destroyed at the end of the scope.
+Syntactically, it resembles a binding initialized with an existing object (`:OLD`), or newly-created object (`:NEW` or `:TEMP`).  CFFI objects created as `:TEMP` are destroyed at the end of the scope.
 ```
 (defstruct spoint x y)
 (with- (pt :new 'spoint)
@@ -55,15 +55,11 @@ Syntactically, it resembles a binding initialized with an existing object (:OLD)
 ## License
 BSD 3-clause License
 ## Installation
-Clone the repo into a visible directory, use (ql:quickload "CL-WITH") or ASDF magic.  CL-WITH exposes a single symbol, the `with-` macro.
+Clone the repo into a visible directory and evaluate `(ql:quickload "CL-WITH")` or equivalent ASDF magic. 
 
-To add to your project, add `cl-with` to the dependency list of your .asd file:
-```
-:depends-on (... #:cl-with ...)
-```
-To be able to type `(with- ...` instead of `(with::with- ..`, evaluate (use-package #:with) or add `:#with` to your `:use` line in the package file.
-```
-This library requires CFFI and CLOSER-MOP
+In your project, add system `CL-WITH` to the dependency list of your .asd file, and package `WITH` to your `defpackage` `:USE` line.
+`
+This library requires uses (and internally depends on) CFFI and CLOSER-MOP.
 
 # Usage
 
