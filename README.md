@@ -114,7 +114,7 @@ The initializers for such bindings are regular Lisp code (that is, they are not 
 ```
 ## STRUCT, CLASS or CFFI instance manipulation
 
-A descriptor may also bind a slotted object or a CFFI foreign object:
+A clause may also bind a slotted object or a CFFI foreign object:
 
 `(instance :new|:temp|:old type [prefix] [bindings]`
 
