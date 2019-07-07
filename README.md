@@ -10,9 +10,9 @@ WITH- is a universal macro that:
 The most visible benefit: grouping any number of existing with- macros together avoids deep indentation and makes complicated expressions simpler:
 ```
 (with-
-    (:open-file ( ...))    
+    (:open-file ( ...))             ;(with-open-file
 	...
-    (:output-to-string .))
+    ('mypkg::a-smaile .))           ;(mypkg::with-a-smile ...
   ...))
 ```
 
@@ -21,8 +21,8 @@ The most visible benefit: grouping any number of existing with- macros together 
 It is easy to bind one or more variables in a with- statement
 ```
 (with- (...                  
-        (i 9)                ;like (let ((i 9))...)
-        ((j k) (values 1 2)) ;like (multiple-value-bind (j k)(values 1 2)...)
+        (i 9)                   ;like (let ((i 9))...)
+        ((j k) (values 1 2))    ;like (multiple-value-bind (j k)(values 1 2)...)
         ...)
    ...)
 ```
@@ -33,6 +33,11 @@ More importantly, WITH- unifies the syntax for dealing with structs, classes, an
 
 Syntactically, it resembles a binding initialized with an existing object (:OLD), or newly-created object (:NEW or :TEMP).  CFFI objects created as :TEMP are destroyed at the end of the scope.
 ```
+(defstruct spoint x y)
+(with- (pt :new 'spoint)
+  (setf x 10 y 20)  ;with- automatically bound slot accessors
+  pt)
+
 (with- (p   :temp :int)                              ; like with-foreign-object
        (gpt :temp (:struct gtk:g-point) "P1-")       ; prefixed: p1-x and p1-y 
        (spt :old 'q:spoint "P2-")                    ; existing instance, p2-x etc.
