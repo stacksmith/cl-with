@@ -41,7 +41,7 @@ Syntactically, it resembles a binding initialized with an existing object (:OLD)
 (with- (p   :temp :int)                              ; like with-foreign-object
        (gpt :temp (:struct gtk:g-point) "P1-")       ; prefixed: p1-x and p1-y 
        (spt :old 'q:spoint "P2-")                    ; existing instance, p2-x etc.
-       (ppp :new 'graphics:point "" (h hor)(v ver))  ; rename graphics::hor to h, etc.
+       (ppp :new 'graphics:point (h hor)(v ver))     ; rename graphics::hor to h, etc.
   (setf p1-x p2-x              ;note that bindings are package-local!
         p1-y p2-y)             ;and prefixed to differentiate multiple objects
   (setf h (+ p1-x p2-x)
