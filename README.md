@@ -179,11 +179,18 @@ CFFI slotted objects also allow binding pointers to slots using one of:
   (setf h (+ p1-x p2-x)
         v (- p1-x 3))
   ppp) ```
-
+```
 
 
 			 
+## Notes
 
+CL-WITH provides an additional macro `WITH-CODE` which may be used as part of the with- stack to evaluate arbitrary code for side-effects.
+```
+(with- (p :temp :int)
+       (:code (format t "Allocated ~A~%" p))
+	   ...
+```
 
 			 
 
