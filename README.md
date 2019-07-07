@@ -61,8 +61,16 @@ BSD 3-clause License
 
 ## Installation
 
-Clone the repo into a visible directory, use (ql:quickload "CL-WITH") or ASDF magic.
+Clone the repo into a visible directory, use (ql:quickload "CL-WITH") or ASDF magic.  CL-WITH exposes a single symbol, the `with-` macro.
 
+To add to your project, add `cl-with` to the dependency list of your .asd file:
+```
+:depends-on (... #:cl-with ...)
+```
+To be able to type `(with- ...` instead of `(with::with- ..`, add package `:#with` to your `:use` line in the package file - something like
+```
+ (:use #:with ... #:cl)
+```
 This library requires CFFI and CLOSER-MOP
 
 # Usage
@@ -173,7 +181,7 @@ CFFI slotted objects also allow binding pointers to slots using one of:
        (gpt :temp (:struct gtk:g-point) "P1-")       ; prefixed: p1-x and p1-y 
        (spt :old 'q:spoint "P2-")                    ; existing instance, p2-x etc.
        (ppp :new 'graphics:point "" (h hor)(v ver))  ; rename graphics::hor to h, etc.
-  (setf p1-x p2-x              ;note that bindings are package-local!
+(setf p1-x p2-x              ;note that bindings are package-local!
         p1-y p2-y)             ;and prefixed to differentiate multiple objects
   (setf h (+ p1-x p2-x)
         v (- p1-x 3))
