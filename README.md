@@ -65,13 +65,13 @@ Clone the repo into a visible directory, use (ql:quickload "CL-WITH") or ASDF ma
 
 This library requires CFFI and CLOSER-MOP
 
-## Usage
+# Usage
 
 `(with- clause(s) body)` 
 
 A with- statement may contain a single clause or a list of clauses.  Each clause is a list.  Each clause has access to bindings created by all previous clauses, and may create additional bindings.
 
-### WITH- macro aggregation
+## WITH- macro aggregation
 
 A clause may start with a shortened, keyword version of any existing with- macro, with the 'with-' prefix removed and : prepended).  The rest of the list contains whatever the original macro expects for its parameters.
 
@@ -82,7 +82,7 @@ Example:
   (print s "Hello"))
 ```
 
-### BINDING
+## BINDING
 
 A clause may start with a symbol, in which case it acts much like a let form.  Any list elements that follow will be construed as the initialization form.
 
@@ -104,7 +104,7 @@ The initializers for such bindings are regular Lisp code (that is, they are not 
   (print invisible); *** ERROR  invisible is not in scope!
 )
 ```
-### STRUCT, CLASS or CFFI instance manipulation
+## STRUCT, CLASS or CFFI instance manipulation
 
 A descriptor may also be in the form of:
 
