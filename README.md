@@ -4,9 +4,7 @@ WITH- is a universal macro that:
 * groups with- style macros (to avoid deep indentation)
 * uniformly manages structs, classes and CFFI objects
 * unifies the syntax binding single and multiple values
-
 ### WITH- aggregation
-
 The most visible benefit: grouping any number of existing with- macros together avoids deep indentation and makes complicated expressions simpler:
 ```
 (with-
@@ -15,9 +13,7 @@ The most visible benefit: grouping any number of existing with- macros together 
     ('mypkg::a-smaile .))           ;(mypkg::with-a-smile ...
   ...))
 ```
-
 ### BINDING
-
 It is easy to bind one or more variables in a with- statement
 ```
 (with- (...                  
@@ -26,9 +22,7 @@ It is easy to bind one or more variables in a with- statement
         ...)
    ...)
 ```
-
 ### CLASS, STRUCT and CFFI object integration
-
 More importantly, WITH- unifies the syntax for dealing with structs, classes, and foreign CFFI objects, extracting and rebinding slot accessors (automatically or selectively).  The syntax establishes a clear distinction between existing object, temporary objects and newly-created object that are expected to outlive the statement.  
 
 Syntactically, it resembles a binding initialized with an existing object (:OLD), or newly-created object (:NEW or :TEMP).  CFFI objects created as :TEMP are destroyed at the end of the scope.
@@ -58,23 +52,16 @@ Syntactically, it resembles a binding initialized with an existing object (:OLD)
 * allocates :new objects when requested
 * allocates :temp objects, destroying CFFI objects at the end
 
-
-
 ## License
-
 BSD 3-clause License
-
 ## Installation
-
 Clone the repo into a visible directory, use (ql:quickload "CL-WITH") or ASDF magic.  CL-WITH exposes a single symbol, the `with-` macro.
 
 To add to your project, add `cl-with` to the dependency list of your .asd file:
 ```
 :depends-on (... #:cl-with ...)
 ```
-To be able to type `(with- ...` instead of `(with::with- ..`, add package `:#with` to your `:use` line in the package file - something like
-```
- (:use #:with ... #:cl)
+To be able to type `(with- ...` instead of `(with::with- ..`, evaluate (use-package #:with) or add `:#with` to your `:use` line in the package file.
 ```
 This library requires CFFI and CLOSER-MOP
 

@@ -3,10 +3,10 @@
 (in-package #:with)
 
 
-(defmacro with-this((&rest this) &body body)
+(defmacro with-code((&rest code) &body body)
   ;`(,@before (unwind-protect ,@body ,after ))
-  `(,@this ,@body)
-  )
+  `(progn ,code ,@body))
+
 (defparameter *banlist* nil)
 ;;============================================================================
 (defmacro bancheck (inst descriptor)
