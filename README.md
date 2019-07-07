@@ -90,6 +90,11 @@ Example:
   (print s "Hello"))
 ```
 
+If the with-macro is in another package and is not imported, instead of using a keyword, use a quoted symbol with the package specification:
+```
+(with- ('another-package:foo ...)..) ; same as (another-package:with-foo ...
+```
+
 ## BINDING
 
 A clause may start with a symbol, in which case it acts much like a let form.  Any list elements that follow will be construed as the initialization form.

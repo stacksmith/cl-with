@@ -257,7 +257,15 @@
   (let ((unparsed-type (cffi::unparse-type cffitype)))
     `(with-foreign-object (,inst ,unparsed-type ,@(car rest))
        ,@body)))
-
+(defmacro with-with ((symbol &rest rest) &body body)
+  (let ((withname (find-symbol-or-die
+		   (catstring "WITH-" symbol)
+		   (if (keywordp symbol)
+		       *package*
+		       (symbol-package symbol))
+		   "~S is not a valid clause" `(,symbol ,@rest) )))
+    `(,withname ,rest ,@body))
+  )
 ;;===============================================================================
 (defmacro with-one (descriptor  &body body)
   (let ((p1 (first descriptor))
@@ -265,10 +273,12 @@
 	(p3 (third descriptor))
 	(params (cdddr descriptor)))
     (if (keywordp p1) ; (:output-to-file
-	(let ((withname (find-symbol-or-die
+	`(with-with (,p1 ,@(cdr descriptor)) ,@body)
+#||	(let ((withname (find-symbol-or-die
 			 (catstring "WITH-" p1) *package*
 			 "~A is not a valid WITH- symbol" )))
 	  `(,withname ,@(cdr descriptor) ,@body))
+||#
 	(if (symbolp p1) ;; (x :old type parms
 	    (case p2
 	      ((:old :existing)
@@ -283,7 +293,9 @@
 	      (t  `(let ((,p1 ,@(cdr descriptor)))
 		     ,@body)))
 	    (if (listp p1) ; ((x y).. = mvb
-		`(multiple-value-bind ,p1 ,@(cdr descriptor) ,@body)
+		(if (eq 'quote (car p1))
+		    `(with-with (,(cadr p1) ,@(cdr descriptor)) ,@body)
+		    `(multiple-value-bind ,p1 ,@(cdr descriptor) ,@body))
 		(error "Invalid WITH- descriptor ~A" descriptor))))))
 
 ;;==============================================================================
@@ -298,7 +310,8 @@
 (defmacro with- (descriptor-or-descriptors &body body)
   (setf *banlist* nil)
   (let ((descriptors
-	 (if (consp (car descriptor-or-descriptors))
+	 (if (and (consp (car descriptor-or-descriptors))
+		  (not (eq 'quote (caar descriptor-or-descriptors))))
 	     descriptor-or-descriptors
 	     (list descriptor-or-descriptors))))
     `(with-many (,(car descriptors) ,@(cdr descriptors)) 
