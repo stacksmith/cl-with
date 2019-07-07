@@ -31,10 +31,10 @@ It is easy to bind one or more variables in a with- statement
 
 More importantly, WITH- unifies the syntax for dealing with structs, classes, and foreign CFFI objects, extracting and rebinding slot accessors (automatically or selectively).  The syntax establishes a clear distinction between existing object, temporary objects and newly-created object that are expected to outlive the statement.  
 ```
-(with- (:temp :int p)                                ; like with-foreign-object
-       (:temp (:struct gtk:g-point) gpt "P1-")       ; prefixed: p1-x and p1-y 
-       (:old 'q:spoint spt "P2-")                    ; existing instance, p2-x etc.
-       (:new 'graphics:point ppp "" (h hor)(v ver))  ; rename graphics::hor to h, etc.
+(with- (p   :temp :int)                              ; like with-foreign-object
+       (gpt :temp (:struct gtk:g-point) "P1-")       ; prefixed: p1-x and p1-y 
+       (spt :old 'q:spoint "P2-")                    ; existing instance, p2-x etc.
+       (ppp :new 'graphics:point "" (h hor)(v ver))  ; rename graphics::hor to h, etc.
   (setf p1-x p2-x              ;note that bindings are package-local!
         p1-y p2-y)             ;and prefixed to differentiate multiple objects
   (setf h (+ p1-x p2-x)
