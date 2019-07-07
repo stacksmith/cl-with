@@ -2,7 +2,7 @@
 
 WITH- is a universal macro that:
 * groups with- style macros (to avoid deep indentation)
-* uniformly manages accessors of structs, classes and CFFI objects
+* uniformly manages structs, classes and CFFI objects
 * unifies the syntax binding single and multiple values
 
 ### WITH- aggregation
