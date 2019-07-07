@@ -30,6 +30,8 @@ It is easy to bind one or more variables in a with- statement
 ### CLASS, STRUCT and CFFI object integration
 
 More importantly, WITH- unifies the syntax for dealing with structs, classes, and foreign CFFI objects, extracting and rebinding slot accessors (automatically or selectively).  The syntax establishes a clear distinction between existing object, temporary objects and newly-created object that are expected to outlive the statement.  
+
+Syntactically, it resembles a binding initialized with an existing object (:OLD), or newly-created object (:NEW or :TEMP).  CFFI objects created as :TEMP are destroyed at the end of the scope.
 ```
 (with- (p   :temp :int)                              ; like with-foreign-object
        (gpt :temp (:struct gtk:g-point) "P1-")       ; prefixed: p1-x and p1-y 
@@ -106,9 +108,13 @@ The initializers for such bindings are regular Lisp code (that is, they are not 
 
 A descriptor may also be in the form of:
 
-`(:new|:temp|:old| type instance [prefix] [bindings]`
+`(instance :new|:temp|:old type [prefix] [bindings]`
 
-A clause starting with one of `:NEW`, `:TEMP` or `:OLD` - known as disposition keywords, indicates the desire to create or use an existing instance of a slotted type or a CFFI foreign object.  
+### INSTANCE
+```
+instance     A symbol, bound to an existing object if :old, or to be
+              bound to a newly created object if :new or :temp
+```
 
 ### DISPOSITION
 ```
@@ -132,12 +138,6 @@ type         A quoted symbol signifying struct or class name
 The `TYPE` parameter specifies the type of the object for this clause.  Note that Lisp class and struct types are quoted, while CFFI types such as (:struct foo) are not quoted.
 
 For the sake of brevity, a variable containing a CFFI type may be used - as an unquoted symbol.  
-
-### INSTANCE
-```
-instance     A symbol, bound to an existing object if :old, or to be
-              bound to a newly created object if :new or :temp
-```
 
 ### PREFIX
 ```
