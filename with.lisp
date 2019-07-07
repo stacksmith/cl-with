@@ -254,8 +254,9 @@
 	     ,@body))))))
 
 (defmethod get-temp-clause (inst (cffitype cffi::foreign-built-in-type) body &rest rest)
-  `(with-foreign-object (,inst ,@(cffi::unparse-type cffitype) ,@(car rest))
-      ,@body))
+  (let ((unparsed-type (cffi::unparse-type cffitype)))
+    `(with-foreign-object (,inst ,unparsed-type ,@(car rest))
+       ,@body)))
 
 ;;===============================================================================
 (defmacro with-one (descriptor  &body body)
@@ -300,9 +301,8 @@
 	 (if (consp (car descriptor-or-descriptors))
 	     descriptor-or-descriptors
 	     (list descriptor-or-descriptors))))
-    `(let (*banlist*)
-       (with-many (,(car descriptors) ,@(cdr descriptors)) 
-	 ,@body))))
+    `(with-many (,(car descriptors) ,@(cdr descriptors)) 
+      ,@body)))
 
 
 
