@@ -51,6 +51,7 @@ Syntactically, it resembles a binding initialized with an existing object (`:OLD
 * works with existing :old objects
 * allocates :new objects when requested
 * allocates :temp objects, destroying CFFI objects at the end
+* automatically generates value accessors for built-in CFFI objects
 
 ## License
 BSD 3-clause License
