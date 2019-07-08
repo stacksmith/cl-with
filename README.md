@@ -183,12 +183,50 @@ CFFI slotted objects also allow binding pointers to slots using one of:
   ppp) ```
 ```
 
+## BUILT-IN CFFI TYPE INSTANCES
 
-			 
+Built-in CFFI types such as `:INT` are supported using a slightly different clause syntax
+
+`(instance :new|:temp|:old type [value-accessor] [pointer-accessor]`
+
+As usual, a clause may describe an existing binding (or actual data) in instance - or create a new one.  In the case of :TEMP disposition, it will also be destroyed and should not be used outside of its scope.
+
+In most cases, the `INSTANCE` parameter is a symbol bound to the pointer.  By default, an automatic value accessor is generated, using the same name prefixed with *; i.e. clause `(foo :temp :int)` creates an environment in which `*foo` is the value accessor and `foo` is a pointer accessor. 
+
+It is always possible to choose different accessor names using the `VALUE-ACCESSOR` and `POINTER-ACCESSOR` parameters.  
+
+If `INSTANCE` parameter is not a symbol but an actual pointer, `:OLD` disposition must be used.  Since there is no symbolic name to start with, default accessor names are `PTR` and `VAL`.  This may be sufficient if only one clause is used; otherise, it is best to specify the names of both pointer and value accessors for each clause. 
+
+### POINTER ACCESSOR
+
+If `POINTER-ACCESSOR` is specified, it may be used to fetch the object's foreign pointer. 
+
+If it is not specified, a pointer accessor called `PTR` will be generated *ONLY IF INST IS NOT A SYMBOL*.  This is done since there is no way to access the pointer otherwise.  If INSTANCE is a symbol it is bound to the pointer and may be used freely.
+
+### VALUE ACCESSOR 
+
+If `VALUE-ACCESSOR` parameter is specified, it may be used to fetch the value of the object pointer using the specified `TYPE`.  
+
+If no `VALUE-ACCESSOR` parameter is specified, a value accessor will be automatically generated using `INSTANCE` prefixed with an asterisk if it's a symbol.  If it is not a symbol, the default value accessor name is "VAL"
+
+### Example:
+```
+(defparameter *q* (foreign-alloc :int :initial-element 3 ))
+(defparameter *r* (foreign-alloc :int :initial-element 5 ))
+
+(with- ((z :new :int)     ;inst is a symbol, so *z is value accessor
+        (#.*q* :old :int) ;inst is not a symbol; default VAL accessor
+	    (*r* :old :int val-r)) ;VAL-R is specified - better than **R* :)
+  (setf *z (+ val val-r))
+  z)                     ;inst z is a valid pointer accessor
+```			 
 ## Notes
 
 CL-WITH provides an additional macro `WITH-CODE` which may be used as part of the with- stack to evaluate arbitrary code for side-effects.
 ```
+
+
+
 (with- (p :temp :int)
        (:code (format t "Allocated ~A~%" p))
 	   ...

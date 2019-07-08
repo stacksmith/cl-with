@@ -188,10 +188,29 @@
 	`(with-foreign-slots (,fixed-binds ,inst ,unparsed-type) 
 	   ,@body)))))
 
-(defmethod get-old-clause (inst (cffitype cffi::foreign-built-in-type) body &rest rest)
-  (declare (ignore rest))
-  `(progn
-     ,@body))
+;; SYMBOL :OLD :INT etc.
+(defun parse-foreign-built-in-type-params (inst cffitype params)
+  (let* ((unparsed-type (cffi::unparse-type cffitype))
+	 (val-accessor-sym (or (caar params) (if (symbolp inst)
+						 (symbolicate "*" inst)
+						 (intern "VAL"))))
+	 ;; if inst is already a symbol, ptr-accessor only if asked
+	 (ptr-accessor-sym (or (cadar params) (unless (symbolp inst)
+						(intern "PTR"))))
+	 (val-accessor `((,val-accessor-sym (mem-ref ,inst ,unparsed-type))))
+	 (ptr-accessor (when ptr-accessor-sym
+			 `((,ptr-accessor-sym ,inst)))))
+    (values val-accessor ptr-accessor)))
+
+(defmethod get-old-clause (inst (cffitype cffi::foreign-built-in-type)
+			   body &rest rest)
+  (multiple-value-bind (val-accessor ptr-accessor)
+      (parse-foreign-built-in-type-params inst cffitype rest)
+    `(symbol-macrolet (,@val-accessor
+		       ,@ptr-accessor)
+       ,@body)))
+
+
 ;;==============================================================================
 ;; GET-NEW-CLAUSE
 ;;
@@ -223,9 +242,12 @@
 ;; Note: do not quote the simple type
 (defmethod get-new-clause (inst (cffitype cffi::foreign-built-in-type) body &rest rest)
   (let ((unparsed-type (cffi::unparse-type cffitype)))
-    
-    `(let ((,inst (foreign-alloc ,unparsed-type ,@(car rest))))
-       ,@body)))
+    (multiple-value-bind (val-accessor ptr-accessor)
+	(parse-foreign-built-in-type-params inst cffitype rest)
+      `(let ((,inst (foreign-alloc ,unparsed-type ,@(car rest))))
+	 (symbol-macrolet (,@val-accessor
+			   ,@ptr-accessor)
+	   ,@body)))))
 
 ;;==============================================================================
 ;; GET-TEMP-CLAUSE
@@ -255,8 +277,13 @@
 
 (defmethod get-temp-clause (inst (cffitype cffi::foreign-built-in-type) body &rest rest)
   (let ((unparsed-type (cffi::unparse-type cffitype)))
-    `(with-foreign-object (,inst ,unparsed-type ,@(car rest))
-       ,@body)))
+    (multiple-value-bind (val-accessor ptr-accessor)
+	(parse-foreign-built-in-type-params inst cffitype rest)
+      `(with-foreign-object (,inst ,unparsed-type ,@(car rest))
+	 (symbol-macrolet (,@val-accessor
+			   ,@ptr-accessor)
+	   ,@body)))))
+
 (defmacro with-with ((symbol &rest rest) &body body)
   (let ((withname (find-symbol-or-die
 		   (catstring "WITH-" symbol)
@@ -272,31 +299,35 @@
 	(p2 (second descriptor))
 	(p3 (third descriptor))
 	(params (cdddr descriptor)))
-    (if (keywordp p1) ; (:output-to-file
-	`(with-with (,p1 ,@(cdr descriptor)) ,@body)
-#||	(let ((withname (find-symbol-or-die
-			 (catstring "WITH-" p1) *package*
-			 "~A is not a valid WITH- symbol" )))
-	  `(,withname ,@(cdr descriptor) ,@body))
-||#
-	(if (symbolp p1) ;; (x :old type parms
-	    (case p2
-	      ((:old :existing)
-	       (bancheck p1 descriptor)
-	       (get-old-clause p1 (get-type-info p3 descriptor) body params))
-	      (:new
-	       (bancheck p1 descriptor)
-	       (get-new-clause p1 (get-type-info p3 descriptor) body params))
-	      (:temp
-	       (bancheck p1 descriptor)
-	       (get-temp-clause p1 (get-type-info p3 descriptor) body params))
-	      (t  `(let ((,p1 ,@(cdr descriptor)))
-		     ,@body)))
-	    (if (listp p1) ; ((x y).. = mvb
-		(if (eq 'quote (car p1))
-		    `(with-with (,(cadr p1) ,@(cdr descriptor)) ,@body)
-		    `(multiple-value-bind ,p1 ,@(cdr descriptor) ,@body))
-		(error "Invalid WITH- descriptor ~A" descriptor))))))
+    (typecase p1
+      (keyword 	`(with-with (,p1 ,@(cdr descriptor)) ,@body))
+      (list p1 ; ((x y).. = mvb unless ('open-file ...
+	    (if (eq 'quote (car p1))
+		`(with-with (,(cadr p1) ,@(cdr descriptor)) ,@body)
+		`(multiple-value-bind ,p1 ,@(cdr descriptor) ,@body)))
+      (symbol (case p2 ; really SYMBOL, but possibly an old instance
+		((:old :existing)
+		 (bancheck p1 descriptor)
+		 (get-old-clause p1 (get-type-info p3 descriptor) body params))
+		(:new
+		 (bancheck p1 descriptor)
+		 (get-new-clause p1 (get-type-info p3 descriptor) body params))
+		(:temp
+		 (bancheck p1 descriptor)
+		 (get-temp-clause p1 (get-type-info p3 descriptor) body params))
+		(t  `(let ((,p1 ,@(cdr descriptor)))
+		       ,@body))))
+      ;; a rare but possible case of :old with a literal object p1
+      (t
+       (case p2
+	 ((:old :existing)
+	  (get-old-clause p1 (get-type-info p3 descriptor) body params))
+	 (t (error "Since INST is not a symbol, expecting :OLD, not ~S~% WITH-CLAUSE: ~S"
+		   p2 descriptor))))
+
+      
+      )
+    ))
 
 ;;==============================================================================
 (defmacro with-many ( (descriptor &rest descriptors) &body body)
