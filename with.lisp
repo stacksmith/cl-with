@@ -330,7 +330,7 @@
     ))
 
 ;;==============================================================================
-q(defmacro with-many ( (descriptor &rest descriptors) &body body)
+(defmacro with-many ( (descriptor &rest descriptors) &body body)
   `(with-one ,descriptor
      ,(if descriptors
 	  `(with-many (,(car descriptors) ,@(cdr descriptors))
