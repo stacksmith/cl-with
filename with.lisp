@@ -291,7 +291,7 @@
 		       *package*
 		       (symbol-package symbol))
 		   "~S is not a valid clause" `(,symbol ,@rest) )))
-    `(,withname ,rest ,@body))
+    `(,withname ,@rest ,@body))
   )
 ;;===============================================================================
 (defmacro with-one (descriptor  &body body)
@@ -330,7 +330,7 @@
     ))
 
 ;;==============================================================================
-(defmacro with-many ( (descriptor &rest descriptors) &body body)
+q(defmacro with-many ( (descriptor &rest descriptors) &body body)
   `(with-one ,descriptor
      ,(if descriptors
 	  `(with-many (,(car descriptors) ,@(cdr descriptors))
