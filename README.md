@@ -1,28 +1,21 @@
 # WITH-
 
 WITH- is a universal macro that:
-* groups with- style macros (to avoid deep indentation)
+* groups existing with- style macros (to avoid deep indentation)
 * uniformly manages structs, classes and CFFI objects
+* discovers and binds slots of existing objects, even unexported objects in other packages
 * unifies the syntax binding single and multiple values
-### WITH- aggregation
-The most visible benefit: grouping any number of existing with- macros together avoids deep indentation and makes complicated expressions simpler:
-```
-(with-
-    (:open-file ( ...))             ;(with-open-file
-	...
-    ('mypkg::a-smaile .))           ;(mypkg::with-a-smile ...
-  ...))
-```
-### BINDING
+
+### BINDING single and multiple values
+
 It is easy to bind one or more variables in a with- statement
 ```
-(with- (...                  
-        (i 9)                   ;like (let ((i 9))...)
-        ((j k) (values 1 2))    ;like (multiple-value-bind (j k)(values 1 2)...)
-        ...)
-   ...)
+(with- (i 9) (print i))              ;like (let ((i 9))...
+
+(with- ((j k) (values 1 2))...)      ;like (multiple-value-bind (j k)(values 1 2)...
 ```
 ### CLASS, STRUCT and CFFI object integration
+
 More importantly, WITH- unifies the syntax for dealing with structs, classes, and foreign CFFI objects, extracting and rebinding slot accessors (automatically or selectively).  The syntax establishes a clear distinction between existing object, temporary objects and newly-created object that are expected to outlive the statement.  
 
 Syntactically, it resembles a binding initialized with an existing object (`:OLD`), or newly-created object (`:NEW` or `:TEMP`).  CFFI objects created as `:TEMP` are destroyed at the end of the scope.
@@ -32,10 +25,10 @@ Syntactically, it resembles a binding initialized with an existing object (`:OLD
   (setf x 10 y 20)  ;with- automatically bound slot accessors
   pt)
 
-(with- (p   :temp :int)                              ; like with-foreign-object
-       (gpt :temp (:struct gtk:g-point) "P1-")       ; prefixed: p1-x and p1-y 
-       (spt :old 'q:spoint "P2-")                    ; existing instance, p2-x etc.
-       (ppp :new 'graphics:point (h hor)(v ver))     ; rename graphics::hor to h, etc.
+(with- ((p   :temp :int)                              ; like with-foreign-object
+        (gpt :temp (:struct gtk:g-point) "P1-")       ; prefixed: p1-x and p1-y 
+        (spt :old 'q:spoint "P2-")                    ; existing instance, p2-x etc.
+        (ppp :new 'graphics:point (h hor)(v ver)))    ; rename graphics::hor to h, etc.
   (setf p1-x p2-x              ;note that bindings are package-local!
         p1-y p2-y)             ;and prefixed to differentiate multiple objects
   (setf h (+ p1-x p2-x)
@@ -116,15 +109,15 @@ A clause may also bind a slotted object or a CFFI foreign object:
 ```
 instance     If :old, a reference to an existing object or a symbol 
              bound to an existing object; or
-			 If :new or :temp -- a symbol that will be bound to 
-			 a newly created object.
+	     If :new or :temp -- a symbol that will be bound to 
+	     a newly created object.
 ```
 
 ### DISPOSITION
 ```
 disposition  :new  to create a new object and bind to 'instance'
              :temp as above, but destroyed on exit if foreign
-			 :old  to use an existing, bound 'instance'
+	     :old  to use an existing, bound 'instance'
 ```
 :NEW clauses create a new object of type specified by `type` and create a lexical binding  to the symbol `instance`.  Since `instance` is lexical, you must return or assign the object prior to leaving the scope if you need it later.  This is especially important for foreign objects, since no automatic deallocation takes place for objects created with the `:NEW` clause.
 
@@ -136,8 +129,8 @@ disposition  :new  to create a new object and bind to 'instance'
 ```
 type         A quoted symbol signifying struct or class name
              A symbol whose symbol-value is a type
-			 A keyword denoting a simple CFFI type such as :int
-			 A list representing a cffi type such as (:STRUCT ...)
+	     A keyword denoting a simple CFFI type such as :int
+	     A list representing a cffi type such as (:STRUCT ...)
 ```
 The `TYPE` parameter specifies the type of the object for this clause.  Note that Lisp class and struct types are quoted, while CFFI types such as (:struct foo) are not quoted.
 
