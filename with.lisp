@@ -339,6 +339,16 @@
 
 ;;==============================================================================
 (defmacro with- (descriptor-or-descriptors &body body)
+	"Expand descriptors, which may be:
+* Existing with-foo forms, specified as (:open-file ...);
+* Let-like forms, e.g. (x 5);
+* Multiple-value-bind-like forms, ((x y z)(foo));
+* Slots of structs, class instances or foreign objects:
+     (p :temp :int); create a foreign :int called p
+     (gpt :old (:struct gtk-g-point) "P1-") make slots x and y of an existing
+     GTK point object called gpt available as 'p1-x' and 'p1-y'.
+Refer to docs for more examples
+ "
   (setf *banlist* nil)
   (let ((descriptors
 	 (if (and (consp (car descriptor-or-descriptors))
