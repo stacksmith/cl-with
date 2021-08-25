@@ -33,7 +33,7 @@ Syntactically, it resembles a binding initialized with an existing object (`:OLD
         p1-y p2-y)             ;and prefixed to differentiate multiple objects
   (setf h (+ p1-x p2-x)
         v (- p1-x 3))
-  ppp) 
+  ppp) ; return :new or :old object, never :temp objects!
 ```  
   
 * works with structs and classes, as well as foreign objects;
@@ -90,9 +90,9 @@ A list of symbols acts as a `multiple-value-bind` form.
   (format t "~A ~A ~A " s found status))
 ```
 
-The initializers for such bindings are regular Lisp code (that is, they are not WITH- clauses).  Any symbols bound in previous clauses are available to initializers.  Needless to say, any local scopes established inside initializers are not visible to the main body.  That is:
+The initializers for such bindings are regular Lisp code (that is, they are not WITH- clauses).  Any symbols bound in previous clauses are available to initializers (perhaps this macro should be called `with*`.  Needless to say, any local scopes established inside initializers are not visible to the main body.  That is:
 ```
-(with ((j 100)
+(with- ((j 100)
        (q (let ((invisible (+ j 99)))) ;j is visible here
             invisible)))
   (print q) ;199 - this is fine
@@ -218,9 +218,6 @@ If no `VALUE-ACCESSOR` parameter is specified, a value accessor will be automati
 
 CL-WITH provides an additional macro `WITH-CODE` which may be used as part of the with- stack to evaluate arbitrary code for side-effects.
 ```
-
-
-
 (with- (p :temp :int)
        (:code (format t "Allocated ~A~%" p))
 	   ...
