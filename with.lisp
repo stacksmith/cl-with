@@ -345,7 +345,7 @@
 * Multiple-value-bind-like forms, ((x y z)(foo));
 * Slots of structs, class instances or foreign objects:
      (p :temp :int); create a foreign :int called p
-     (gpt :old (:struct gtk-g-point) "P1-") make slots x and y of an existing
+     (gpt :old (:struct gtk-g-point) \"P1-\") make slots x and y of an existing
      GTK point object called gpt available as 'p1-x' and 'p1-y'.
 Refer to docs for more examples
  "
